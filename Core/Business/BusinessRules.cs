@@ -9,16 +9,18 @@ namespace Core.Business
 {
     public static class BusinessRules
     {
-        public static IResult? Run(params IResult[] logics)
+        public static IResult? Run(params IResult[][] logicArgs)
         {
-            foreach (var logic in logics)
+            foreach (var logics in logicArgs)
             {
-                if (!logic.Success)
+                foreach (var logic in logics)
                 {
-                    return logic;
+                    if (!logic.Success)
+                    {
+                        return logic;
+                    }
                 }
             }
-
             return null;
         }
     }

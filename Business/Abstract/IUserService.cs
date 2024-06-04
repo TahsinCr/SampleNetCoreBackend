@@ -6,12 +6,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Core.Business;
 using Core.DataAccess;
+using Core.Utilities.Results;
 
 namespace Business.Abstract
 {
     public interface IUserService: IEntityManagerRepository<User>
     {
-        List<OperationClaim> GetClaims(User user);
-        User GetByMail(string email);
+        IDataResult<List<OperationClaim>> GetClaims(User user);
+        IResult AddClaim(User user, OperationClaim operationClaim);
+        IDataResult<User> GetByMail(string email);
     }
 }

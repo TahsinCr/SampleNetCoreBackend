@@ -45,7 +45,7 @@ namespace Core.Extensions
                 httpContext.Response.StatusCode = 400;
                 return httpContext.Response.WriteAsync(new ValidationErrorDetails()
                 {
-                    StatusCode = 400,
+                    StatusCode = httpContext.Response.StatusCode,
                     Message = "Validate Error",
                     Errors = errors
                 }.ToString());

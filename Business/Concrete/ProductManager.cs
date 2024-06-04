@@ -16,21 +16,29 @@ using Entities;
 
 namespace Business.Concrete
 {
-    public class ProductManager : EntityManagerRepositoryBase<Product>, IProductService
+    public class ProductManager : IProductService
     {
         private readonly IProductDal _productDal;
 
-        public ProductManager(IProductDal productDal) : base(productDal)
+        public ProductManager(IProductDal productDal)
         {
             _productDal = productDal;
         }
 
+        [CacheAspect(duration: 60)]
+        public IDataResult<List<Product>> GetAll()
+        {
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(), Messages.ProductsListed);
+        }
+
+        [CacheAspect(duration: 60)]
         public IDataResult<List<Product>> GetAllByCategoryId(int id)
         {
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(product => product.CategoryId == id));
         }
 
-        [CacheAspect]
+
+        [CacheAspect(duration: 30)]
         public IDataResult<Product> GetById(int id)
         {
             return new SuccessDataResult<Product>(_productDal.Get(product=> product.ProductId == id));
@@ -38,14 +46,37 @@ namespace Business.Concrete
 
         [SecuredOperationAspect("product.add","admin")]
         [ValidationAspect(typeof(ProductValidator))]
-        public override IResult Add(Product product)
+        [CacheRemoveAspect("IProductService.Get")]
+        public IResult Add(Product product)
         {
-            BusinessRules.Run(
+            IResult? result = BusinessRules.Run(new IResult[]{
                 CheckIfProductCountOfCategoryCorrect(product.CategoryId),
                 CheckIfProductNameAlreadyExists(product.ProductName),
-                CheckIfCategoryLimitExceded(product.CategoryId)
-            );
-            return base.Add(product);
+                CheckIfCategoryLimitExceded(product.CategoryId, limit: 10)
+            });
+            if (result != null) return result;
+            
+            _productDal.Add(product);
+            return new SuccessResult(Messages.ProductAdded);
+            
+        }
+
+        [SecuredOperationAspect("product.update", "admin")]
+        [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
+        public IResult Update(Product entity)
+        {
+            _productDal.Update(entity);
+            return new SuccessResult();
+        }
+
+        [SecuredOperationAspect("product.delete", "admin")]
+        [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
+        public IResult Delete(Product entity)
+        {
+            _productDal.Delete(entity);
+            return new SuccessResult();
         }
 
         private IResult CheckIfProductCountOfCategoryCorrect(int categoryId)
@@ -70,10 +101,10 @@ namespace Business.Concrete
             return new SuccessResult();
         }
 
-        private IResult CheckIfCategoryLimitExceded(int categoryId)
+        private IResult CheckIfCategoryLimitExceded(int categoryId, int limit)
         {
-            var result = GetAll();
-            if (result.Data.Count > 15)
+            var result = GetAllByCategoryId(categoryId);
+            if (result.Data.Count > limit)
             {
                 return new ErrorResult(Messages.CategoryLimitExcededError);
             }

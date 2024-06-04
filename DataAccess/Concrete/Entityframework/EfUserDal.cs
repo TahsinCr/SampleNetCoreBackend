@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.DataAccess.EntityFramework;
+using Core.Entities;
 using Core.Entities.Concrete;
 using DataAccess.Abstract;
 using DataAccess.Concrete.Entityframework.Contexts;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Concrete.Entityframework
 {
@@ -22,7 +24,20 @@ namespace DataAccess.Concrete.Entityframework
                     where userOperationClaim.UserId == user.Id
                     select new OperationClaim { Id = operationClaim.Id, Name = operationClaim.Name };
                 return result.ToList();
+            }
+        }
 
+        public void AddClaim(User user, OperationClaim operationClaim)
+        {
+            using (var context = new NorthwindContext())
+            {
+                var addedEntity = context.Entry(new UserOperationClaim
+                {
+                    UserId = user.Id,
+                    OperationClaimId = operationClaim.Id
+                });
+                addedEntity.State = EntityState.Added;
+                context.SaveChanges();
             }
         }
     }
